@@ -1,6 +1,4 @@
 local bu64      = require "ngx.base64"
-local utils     = require "utils"
-local resolver  = require "resolver".nsresolve
 local band      = bit.band
 local rshift    = bit.rshift
 local lshift    = bit.lshift
@@ -16,6 +14,24 @@ local STATUS   = {
         [200]     = "OK",
         [500]     = "Internal Server Error"
 }
+
+local function explode(s, delimiter)
+    if s == nil or delimiter == nil then
+        return nil
+    end
+
+    if string.find(s, delimiter) == nil then
+        return { s }
+    end
+
+    result = {}
+
+    for match in (s..delimiter):gmatch("(.-)"..delimiter) do
+        table.insert(result, match)
+    end
+
+    return result
+end
 
 local function encode_name(s)
     return char(#s) .. s
@@ -69,10 +85,10 @@ local function build_request(qname, id, no_recurse, opts)
 end
 
 function _M:parseRequest(data)
-    local tmp = utils.explode(data,"\r\n")
-    local first = utils.explode(tmp[1]," ")
-    local uriargs = utils.explode(first[2],"?")
-    local args = utils.explode(uriargs[2],"&")
+    local tmp = explode(data,"\r\n")
+    local first = explode(tmp[1]," ")
+    local uriargs = explode(first[2],"?")
+    local args = explode(uriargs[2],"&")
     
     local request = { 
         method  = first[1], 
@@ -84,13 +100,13 @@ function _M:parseRequest(data)
     
     if type(args) == "table" then
         for k,v in pairs(args) do
-        local kv = utils.explode(v,"=")
+        local kv = explode(v,"=")
         request.args[kv[1]] = kv[2]
         end
     end
     
     for i=2,#tmp-2  do
-        local kv = utils.explode(tmp[i],": ")
+        local kv = explode(tmp[i],": ")
         request.header[kv[1]] = kv[2]
     end
     
